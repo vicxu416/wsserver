@@ -66,6 +66,16 @@ func (c *Context) Close() error {
 	return c.Conn.OnceClose()
 }
 
+// WriteBinary write binary data
+func (c *Context) WriteBinary(data []byte) error {
+	return wsutil.WriteServerBinary(c.Conn, data)
+}
+
+// WriteText write text data
+func (c *Context) WriteText(data []byte) error {
+	return wsutil.WriteServerText(c.Conn, data)
+}
+
 type onceCloseConn struct {
 	net.Conn
 	once     sync.Once
