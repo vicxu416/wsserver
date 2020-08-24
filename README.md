@@ -1,7 +1,5 @@
 # WSServer
 
----
-
 WSServer is a dedicated WebSocket server that can be used to run a  chat room or email server.
 
 ## Features
