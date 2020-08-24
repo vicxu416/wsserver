@@ -1,8 +1,5 @@
 package wsserver
 
-// ErrorHandle handle websocket connection context error
-type ErrorHandle func(error)
-
 // ConnErrHandle handle error and connection context
 type ConnErrHandle func(*Context, error)
 
@@ -14,22 +11,37 @@ type Option func(o *Options)
 
 // Options webscoket option
 type Options struct {
-	ErrHandler     ErrorHandle
 	ConnOpendHook  ConnHandle
 	ConnClosedHook ConnHandle
-}
-
-// WSErrorHandle websocket error handle
-func WSErrorHandle(handle func(err error)) Option {
-	return func(o *Options) {
-		o.ErrHandler = handle
-	}
+	Logger         Logger
 }
 
 // ConnHooks represetn connection opened hook and closed hook
-func ConnHooks(opened, closed func(ctx *Context)) Option {
+func ConnHooks(opened, closed ConnHandle) Option {
 	return func(o *Options) {
 		o.ConnOpendHook = opened
-		o.ConnOpendHook = closed
+		o.ConnClosedHook = closed
 	}
+}
+
+// SetLogger set wssever logger
+func SetLogger(logger Logger) Option {
+	return func(o *Options) {
+		o.Logger = logger
+	}
+}
+
+// DefaultOptions default options
+var DefaultOptions = Options{
+	Logger:         newDefualtLogger(),
+	ConnOpendHook:  defaultConnOpenHook,
+	ConnClosedHook: defaultConnCloseHook,
+}
+
+func defaultConnOpenHook(ctx *Context) {
+	ctx.Logger().Infof("ws: websocket connection was built, connection id:%s", ctx.ID)
+}
+
+func defaultConnCloseHook(ctx *Context) {
+	ctx.Logger().Infof("ws: websocket connection was closed, connection id:%s", ctx.ID)
 }

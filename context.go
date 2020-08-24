@@ -3,22 +3,18 @@ package wsserver
 import (
 	"context"
 	"net"
+	"reflect"
 	"sync"
+	"unsafe"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/google/uuid"
 )
 
-func newContext(conn net.Conn) *Context {
-	onceConn := &onceCloseConn{Conn: conn}
-	ctx, cancel := context.WithCancel(context.Background())
-	return &Context{
-		ID:        uuid.New().String(),
-		Conn:      onceConn,
-		Ctx:       ctx,
-		ctxCancel: cancel,
-	}
+// Binder define binding data interface
+type Binder interface {
+	Bind(data []byte) error
 }
 
 // Context represetn websocket connection context
@@ -31,7 +27,13 @@ type Context struct {
 	opcode  ws.OpCode
 	payload []byte
 	rw      sync.RWMutex
-	wg      *sync.WaitGroup
+	serv    *Server
+	store   map[string]interface{}
+}
+
+// Error invoke msg err handler function
+func (c *Context) Error(err error) {
+	c.serv.msgErrorHandlerFunc(c, err)
 }
 
 func (c *Context) read() error {
@@ -47,11 +49,38 @@ func (c *Context) read() error {
 	return nil
 }
 
-// GetPayload get payload
-func (c *Context) GetPayload() []byte {
+// Bind bind payload to target
+func (c *Context) Bind(binder Binder) error {
+	return binder.Bind(c.Payload())
+}
+
+// Logger return logger from websocker server options
+func (c *Context) Logger() Logger {
+	return c.serv.options.Logger
+}
+
+// Reset reset connection context
+func (c *Context) Reset(conn net.Conn) {
+	onceConn := &onceCloseConn{Conn: conn}
+	ctx, cancel := context.WithCancel(context.Background())
+	c.Conn = onceConn
+	c.Ctx = ctx
+	c.ctxCancel = cancel
+	c.ID = uuid.New().String()
+}
+
+// Payload return websocket message payload
+func (c *Context) Payload() []byte {
 	c.rw.RLock()
 	defer c.rw.RUnlock()
 	return c.payload
+}
+
+// OpCode return websocket opcode
+func (c *Context) OpCode() ws.OpCode {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+	return c.opcode
 }
 
 // Close close the connection from server
@@ -61,7 +90,7 @@ func (c *Context) Close() error {
 	c.payload = nil
 	c.opcode = ws.OpClose
 	c.ctxCancel()
-	c.wg.Done()
+	c.serv.wg.Done()
 
 	return c.Conn.OnceClose()
 }
@@ -72,8 +101,31 @@ func (c *Context) WriteBinary(data []byte) error {
 }
 
 // WriteText write text data
-func (c *Context) WriteText(data []byte) error {
-	return wsutil.WriteServerText(c.Conn, data)
+func (c *Context) WriteText(data string) error {
+	return wsutil.WriteServerText(c.Conn, StringToBytes(data))
+}
+
+// ClientAddr represent client ip address
+func (c *Context) ClientAddr() net.Addr {
+	return c.Conn.RemoteAddr()
+}
+
+// Get get value from context
+func (c *Context) Get(key string) interface{} {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+	return c.store[key]
+}
+
+// Set set value into context
+func (c *Context) Set(key string, val interface{}) {
+	c.rw.Lock()
+	defer c.rw.Unlock()
+
+	if c.store == nil {
+		c.store = make(map[string]interface{})
+	}
+	c.store[key] = val
 }
 
 type onceCloseConn struct {
@@ -89,4 +141,12 @@ func (l *onceCloseConn) OnceClose() error {
 
 func (l *onceCloseConn) close() {
 	l.closeErr = l.Conn.Close()
+}
+
+// StringToBytes converts string to byte slice without a memory allocation.
+func StringToBytes(s string) (b []byte) {
+	sh := *(*reflect.StringHeader)(unsafe.Pointer(&s))
+	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	bh.Data, bh.Len, bh.Cap = sh.Data, sh.Len, sh.Len
+	return b
 }
