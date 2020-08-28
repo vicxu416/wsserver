@@ -40,7 +40,7 @@ func colorize(s interface{}, c int) string {
 	return fmt.Sprintf("\x1b[%dm%v\x1b[0m", c, s)
 }
 
-func newDefualtLogger() Logger {
+func NewDefaultLogger() Logger {
 	return &logger{Logger: log.New(os.Stdout, "", log.Ldate|log.Ltime)}
 }
 

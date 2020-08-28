@@ -33,7 +33,7 @@ func SetLogger(logger Logger) Option {
 
 // DefaultOptions default options
 var DefaultOptions = Options{
-	Logger:         newDefualtLogger(),
+	Logger:         NewDefaultLogger(),
 	ConnOpendHook:  defaultConnOpenHook,
 	ConnClosedHook: defaultConnCloseHook,
 }

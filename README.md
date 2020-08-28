@@ -14,3 +14,4 @@ WSServer is a dedicated WebSocket server that can be used to run a  chat room or
 ## References
 
 - [how to handle million websockets connection](https://www.freecodecamp.org/news/million-websockets-and-go-cc58418460bb/)
+- [net poll overview](https://learnku.com/articles/23560/using-golang-to-achieve-million-level-websocket-services)
