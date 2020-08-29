@@ -94,6 +94,7 @@ func (serv *Server) NewContext(conn net.Conn) *Context {
 		Conn:      onceConn,
 		Ctx:       ctx,
 		ctxCancel: cancel,
+		serv:      serv,
 	}
 }
 
@@ -215,8 +216,8 @@ func (serv *Server) upgradeToWS(conn net.Conn) (*Context, error) {
 		return nil, err
 	}
 	wsCtx := serv.getContext()
-	wsCtx.Reset(conn)
 	wsCtx.serv = serv
+	wsCtx.Reset(conn)
 	serv.wg.Add(1)
 	return wsCtx, nil
 }
