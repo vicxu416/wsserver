@@ -87,7 +87,7 @@ type Server struct {
 
 // NewContext create a instance of connection context
 func (serv *Server) NewContext(conn net.Conn) *Context {
-	onceConn := &onceCloseConn{Conn: conn}
+	onceConn := &onceCloseConn{Conn: conn, wg: serv.wg}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Context{
 		ID:        uuid.New().String(),

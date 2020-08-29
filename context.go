@@ -90,8 +90,6 @@ func (c *Context) Close() error {
 	c.payload = nil
 	c.opcode = ws.OpClose
 	c.ctxCancel()
-	c.serv.wg.Done()
-
 	return c.Conn.OnceClose()
 }
 
@@ -131,6 +129,7 @@ func (c *Context) Set(key string, val interface{}) {
 type onceCloseConn struct {
 	net.Conn
 	once     sync.Once
+	wg       *sync.WaitGroup
 	closeErr error
 }
 
@@ -141,6 +140,7 @@ func (l *onceCloseConn) OnceClose() error {
 
 func (l *onceCloseConn) close() {
 	l.closeErr = l.Conn.Close()
+	l.wg.Done()
 }
 
 // StringToBytes converts string to byte slice without a memory allocation.
