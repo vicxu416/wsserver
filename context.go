@@ -61,7 +61,7 @@ func (c *Context) Logger() Logger {
 
 // Reset reset connection context
 func (c *Context) Reset(conn net.Conn) {
-	onceConn := &onceCloseConn{Conn: conn}
+	onceConn := &onceCloseConn{Conn: conn, wg: c.serv.wg}
 	ctx, cancel := context.WithCancel(context.Background())
 	c.Conn = onceConn
 	c.Ctx = ctx
